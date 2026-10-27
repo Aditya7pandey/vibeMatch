@@ -21,37 +21,38 @@ const authMiddleware = async (req:Request,res:Response,next:NextFunction) =>{
         jwt secret se verify karo
         aur agge send karo */
 
-        const authHeader = req.headers.authorization || req.headers.authorization
-        const header = Array.isArray(authHeader)?authHeader[0]:authHeader;
+        const header = req.headers.authorization;
 
-        if(!header?.startswith('Bearer ')){
+        if(typeof header !== 'string' || !header.startsWith('Bearer ')){
             return res.status(401).json({
                 message:"Unauthorized"
             })
         }
 
-        const token = header!.split(' ')[1];
-        if(!token) return res.json({
-            message:'Unauthorized'
-        })
-
-        jwt.verify(token as string,process.env.ACCESS_JWT_SECRET!,(err,decoded)=>{
-            if(err){
-                return res.json({
-                    message:"unauthorized"
-                })
-            }
-            
-            (req as AuthRequest).user = decoded as {id:string}
-            next();
-        })
-
-    } catch (error) {
-        if(error instanceof Error){
-            return res.status(500).json({
-                error:error.message
+        const token = header.split(' ')[1];
+        if(!token){
+            return res.status(401).json({
+                message:'Unauthorized'
             })
         }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token,process.env.ACCESS_JWT_SECRET!) as {id:string}
+        } catch {
+            return res.status(401).json({
+                message:"unauthorized"
+            })
+        }
+
+        (req as AuthRequest).user = {id:decoded.id}
+        next();
+
+    } catch (error) {
+        console.log(error instanceof Error ? error.message : error)
+        return res.status(500).json({
+            error:error instanceof Error ? error.message : "internal server error"
+        })
     }
 }
 
