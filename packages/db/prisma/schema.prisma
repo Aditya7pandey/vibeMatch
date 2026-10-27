@@ -13,11 +13,13 @@ datasource db {
 }
 
 model user {
-  id        String   @id @default(uuid())
-  name      String?
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
+  id                  String                 @id @default(uuid())
+  name                String?
+  email               String                 @unique
+  password            String
+  createdAt           DateTime               @default(now())
+  conversationMembers conversation_members[]
+  messages            messages[]
 }
 
 enum GroupRole {
@@ -30,27 +32,34 @@ model conversation {
   type                GroupRole              @default(DIRECT)
   name                String?
   createdAt           DateTime               @default(now())
-  created_by          String
+  created_by          String?
   conversationMembers conversation_members[]
   messages            messages[]
 }
 
+enum conversationRole {
+  MEMBER
+  ADMIN
+}
+
 model conversation_members {
-  id             String       @id @default(uuid())
+  id             String           @id @default(uuid())
+  userId         String
   joined_at      DateTime
-  role           String
+  role           conversationRole @default(MEMBER)
   conversationId String
-  messageId      String
-  messages       messages     @relation(fields: [messageId], references: [id])
-  conversation   conversation @relation(fields: [conversationId], references: [id])
+  user           user             @relation(fields: [userId], references: [id])
+  conversation   conversation     @relation(fields: [conversationId], references: [id])
+
+  @@unique([conversationId, userId])
 }
 
 model messages {
-  id                  String                 @id @default(uuid())
-  senderId            String
-  conversationId      String
-  content             String
-  createdAt           DateTime               @default(now())
-  conversation        conversation           @relation(fields: [conversationId], references: [id])
-  conversationMembers conversation_members[]
+  id             String       @id @default(uuid())
+  senderId       String
+  conversationId String
+  content        String
+  createdAt      DateTime     @default(now())
+  sender         user         @relation(fields: [senderId], references: [id])
+  conversation   conversation @relation(fields: [conversationId], references: [id])
 }
